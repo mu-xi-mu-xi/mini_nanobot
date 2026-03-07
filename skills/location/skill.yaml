@@ -1,0 +1,17 @@
+name: get_current_location
+description: 获取用户当前所在城市或根据IP地址获取位置信息
+parameters:
+  type: object
+  properties:
+    source:
+      type: string
+      description: 获取位置信息的来源
+      enum:
+        - ip
+        - manual
+        - ask_user
+      default: ip
+    user_provided_city:
+      type: string
+      description: 如果source是manual，用户提供的城市名称
+  required: []

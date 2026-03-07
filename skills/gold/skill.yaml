@@ -1,0 +1,9 @@
+name: get_gold_price
+description: 查询当前黄金价格
+parameters:
+  type: object
+  properties:
+    currency:
+      type: string
+      description: 货币单位，比如 CNY 或 USD
+  required: []

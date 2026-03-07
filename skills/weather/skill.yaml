@@ -1,0 +1,11 @@
+name: weather
+description: Get weather of city
+
+parameters:
+  type: object
+  properties:
+    city:
+      type: string
+      description: city name
+  required:
+    - city
