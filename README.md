@@ -4,7 +4,7 @@
 
 A lightweight, extensible **LLM Agent framework** built in Python.
 
-Mini NanoBot demonstrates how to build a modular AI agent from scratch with support for:
+Mini NanoBot demonstrates how to build a modular AI agent from scratch with support for
 
 * Tool calling
 * MCP (Model Context Protocol)
