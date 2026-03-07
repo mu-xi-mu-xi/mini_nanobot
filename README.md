@@ -2,326 +2,354 @@
 
 # Mini NanoBot
 
-A lightweight, extensible **LLM Agent framework** built in Python.
+**Mini NanoBot** 是一个使用 Python 实现的轻量级 **LLM Agent 框架**，用于探索和实践现代 AI Agent 的核心架构设计。
 
-Mini NanoBot demonstrates how to build a modular AI agent from scratch with support for
+项目实现了一个完整的 Agent 系统，包括：
 
-* Tool calling
-* MCP (Model Context Protocol)
-* Memory
-* Skill plugins
-* Multiple channels (CLI / Feishu)
-* Provider abstraction
+* 大模型调用
+* 工具调用（Tool Calling）
+* Skill 插件系统
+* MCP（Model Context Protocol）工具接入
+* 对话记忆（Memory）
+* 多渠道输入（CLI / 飞书）
 
-The goal of this project is to provide a **clear and minimal architecture** for learning how modern AI agents work.
-
----
-
-# Features
-
-* **LLM Provider abstraction**
-  Easily integrate different model providers.
-
-* **Tool system**
-  Built-in tools and function-based tools.
-
-* **Skill plugins**
-  YAML + Python based skill definition.
-
-* **MCP support**
-  Connect to external MCP tool servers.
-
-* **Memory system**
-  Simple pluggable memory storage.
-
-* **Prompt management**
-  Prompt templates managed separately.
-
-* **Multiple channels**
-
-  * CLI
-  * Feishu bot
+该项目的目标是 **用最少的代码实现一个清晰、可扩展的 Agent 架构**，帮助理解 AI Agent 的核心工作机制。
 
 ---
 
-# Project Structure
+# 项目特点
+
+**模块化架构**
+
+将 Agent 拆分为：
+
+* Provider（模型提供者）
+* Tool（工具系统）
+* Skill（插件能力）
+* MCP（远程工具）
+* Memory（记忆系统）
+* Channel（交互渠道）
+
+各模块独立设计，方便扩展和维护。
+
+---
+
+**Skill 插件系统**
+
+使用
+
+```
+skill.yaml + run.py
+```
+
+即可快速扩展 Agent 能力，无需修改核心代码。
+
+---
+
+**MCP 支持**
+
+支持通过 **MCP（Model Context Protocol）** 接入远程工具服务器，实现：
+
+* 动态加载工具
+* 工具服务解耦
+* 远程能力扩展
+
+---
+
+**多渠道支持**
+
+当前支持：
+
+* CLI 命令行聊天
+* 飞书机器人
+
+未来可扩展：
+
+* Web
+* Slack
+* Telegram
+
+---
+
+# 系统架构
+
+整体系统架构如下：
+
+```
+             用户
+              │
+              ▼
+        Channel层
+    (CLI / Feishu Bot)
+              │
+              ▼
+            Agent
+              │
+   ┌──────────┼──────────┐
+   │          │          │
+   ▼          ▼          ▼
+Provider    Tools      Memory
+(LLM)      (工具系统)   (记忆系统)
+   │
+   │
+   ▼
+Skill Plugins
+(YAML + Python)
+
+   │
+   ▼
+ MCP Manager
+   │
+   ▼
+MCP Server（远程工具）
+```
+
+Agent 作为核心调度模块，负责：
+
+* 管理对话
+* 调用模型
+* 触发工具
+* 处理工具结果
+* 整合记忆
+
+---
+
+# Agent 工作流程
+
+Agent 的一次完整运行流程如下：
+
+```
+用户输入
+   │
+   ▼
+Channel 接收消息
+   │
+   ▼
+Agent 生成 messages
+(system prompt + memory + history)
+   │
+   ▼
+调用 LLM Provider
+   │
+   ▼
+模型返回响应
+   │
+   ├── 普通文本 → 直接返回用户
+   │
+   └── Tool Call
+           │
+           ▼
+       ToolRegistry 查找工具
+           │
+           ▼
+       执行 Tool.run()
+           │
+           ▼
+       将 Tool 结果写入 session
+           │
+           ▼
+       再次调用 LLM
+```
+
+该循环会持续执行，直到：
+
+* 模型返回最终回答
+* 或达到最大迭代次数
+
+---
+
+# MCP 工具调用流程
+
+MCP（Model Context Protocol）用于接入远程工具服务器。
+
+工作流程：
+
+```
+Agent
+ │
+ │ 请求工具列表
+ ▼
+MCP Client
+ │
+ ▼
+MCP Server
+ │
+ │ 返回 tool schemas
+ ▼
+Agent ToolRegistry
+ │
+ │ 注册 MCPTool
+ ▼
+LLM 触发工具调用
+ │
+ ▼
+MCP Client
+ │
+ ▼
+远程 MCP Server
+ │
+ ▼
+返回工具执行结果
+ │
+ ▼
+Agent 继续推理
+```
+
+这种设计可以实现：
+
+* 工具服务解耦
+* 多 Agent 共享工具
+* 远程能力扩展
+
+---
+
+# 项目目录结构
 
 ```
 mini_nanobot/
 │
 ├── core/
-│   ├── agent.py           # Main agent logic
-│   ├── response.py        # LLM response wrapper
-│   ├── prompt_loader.py   # Prompt template loader
-│   └── message.py         # Message and session classes
+│   ├── agent.py           # Agent 核心逻辑
+│   ├── response.py        # LLM 响应封装
+│   ├── prompt_loader.py   # Prompt 模板加载
+│   └── message.py         # Message / Session
 │
 ├── channels/
-│   ├── base.py            # Channel interface
-│   ├── cli.py             # CLI interface
-│   └── feishu.py          # Feishu bot integration
+│   ├── base.py            # Channel 接口
+│   ├── cli.py             # CLI 聊天
+│   └── feishu.py          # 飞书机器人
 │
 ├── providers/
-│   ├── base.py            # LLM provider interface
-│   └── zhipu.py           # ZhipuAI provider implementation
+│   ├── base.py            # Provider 抽象类
+│   └── zhipu.py           # 智谱AI实现
 │
 ├── tools/
-│   ├── base.py            # Tool base class
-│   ├── function_tool.py   # Function-based tool wrapper
-│   ├── registry.py        # Tool registry
-│   └── builtin/           # Built-in tools
+│   ├── base.py            # Tool 抽象类
+│   ├── function_tool.py   # Function Tool
+│   ├── registry.py        # Tool 注册中心
+│   └── builtin/           # 内置工具
 │
 ├── skills/
-│   ├── loader.py          # Skill loader
-│   ├── gold/              # Example skill
-│   └── weather/           # Weather skill example
+│   ├── loader.py          # Skill 加载器
+│   ├── gold/              # 示例 Skill
+│   └── weather/           # 天气 Skill
 │       ├── skill.yaml
 │       └── run.py
 │
 ├── MCP/
-│   ├── client.py          # MCP client
-│   ├── tool.py            # MCP tool wrapper
-│   └── manager.py         # MCP manager
+│   ├── client.py          # MCP Client
+│   ├── tool.py            # MCP Tool 封装
+│   └── manager.py         # MCP 管理器
 │
 ├── memory/
-│   ├── base.py            # Memory interface
-│   └── store.py           # Simple memory store
+│   ├── base.py            # Memory 抽象
+│   └── store.py           # 简单 Memory Store
 │
 ├── templates/
-│   └── mcp_server.py      # Example MCP server
+│   └── mcp_server.py      # 示例 MCP Server
 │
-└── main.py                # Application entry point
+└── main.py                # 项目入口
 ```
 
 ---
 
-# Architecture Overview
+# 快速开始
 
-The system is composed of several modular components:
-
-```
-User
- │
- ▼
-Channel (CLI / Feishu)
- │
- ▼
-Agent
- │
- ├── Provider (LLM)
- ├── Tools
- ├── Skills
- ├── Memory
- └── MCP Tools
-```
-
-The agent orchestrates interaction between the user, the LLM provider, and external tools.
-
----
-
-# Core Components
-
-## Agent
-
-The `Agent` is responsible for:
-
-* managing conversation session
-* calling LLM providers
-* handling tool calls
-* integrating memory
-* coordinating skills and MCP tools
-
----
-
-## Providers
-
-Providers abstract different LLM services.
-
-Example:
+## 1 安装依赖
 
 ```
-providers/
- ├── base.py
- └── zhipu.py
-```
-
-Adding a new provider only requires implementing the provider interface.
-
----
-
-## Tools
-
-Tools allow the agent to interact with external functions.
-
-Supported tool types:
-
-* built-in tools
-* function tools
-* MCP remote tools
-
-Example structure:
-
-```
-tools/
- ├── base.py
- ├── function_tool.py
- ├── registry.py
- └── builtin/
-```
-
----
-
-## Skills
-
-Skills are lightweight plugins defined using:
-
-* `skill.yaml`
-* `run.py`
-
-Example:
-
-```
-skills/weather/
- ├── skill.yaml
- └── run.py
-```
-
-This allows new capabilities to be added without modifying core code.
-
----
-
-## MCP (Model Context Protocol)
-
-The project includes a simple MCP client that can connect to external MCP servers and dynamically load tools.
-
-Example structure:
-
-```
-MCP/
- ├── client.py
- ├── tool.py
- └── manager.py
-```
-
-A sample MCP server implementation is provided:
-
-```
-templates/mcp_server.py
-```
-
----
-
-## Memory
-
-The memory system provides simple conversation memory storage.
-
-```
-memory/
- ├── base.py
- └── store.py
-```
-
-This can be extended to support vector databases or long-term memory systems.
-
----
-
-# Getting Started
-
-## 1 Install dependencies
-
-```bash
 pip install -r requirements.txt
 ```
 
 ---
 
-## 2 Configure provider
+## 2 配置 API Key
 
-Set your LLM API key (example for ZhipuAI):
+例如使用智谱：
 
-```bash
-export ZHIPU_API_KEY=your_api_key
+```
+export ZHIPU_API_KEY=your_key
 ```
 
 ---
 
-## 3 Run the CLI agent
+## 3 启动 CLI
 
-```bash
+```
 python main.py
 ```
 
-You should now be able to chat with NanoBot in the terminal.
-
----
-
-# Example Interaction
+示例：
 
 ```
-User: What's the weather in Beijing?
+User: 北京天气怎么样？
 
-Agent: Let me check that for you...
+Agent: 我帮你查询一下...
 
-[Tool: weather]
+[调用 weather 工具]
 
-Agent: The weather in Beijing is sunny.
+Agent: 北京今天晴天，气温 26℃。
 ```
 
 ---
 
-# Extending NanoBot
+# 扩展能力
 
-## Add a new tool
+## 添加新 Tool
 
-1. Create a tool implementation
-2. Register it in `ToolRegistry`
+1. 继承 `Tool`
+2. 实现 `run()`
+3. 注册到 `ToolRegistry`
 
 ---
 
-## Add a new skill
+## 添加新 Skill
 
-Create a new folder:
+创建目录：
 
 ```
-skills/my_skill/
+skills/my_skill
 ```
 
-Add:
+添加：
 
 ```
 skill.yaml
 run.py
 ```
 
+即可自动加载。
+
 ---
 
-## Add a new provider
+## 添加新 Provider
 
-Implement the provider interface:
+实现：
 
 ```
 providers/base.py
 ```
 
----
-
-## Connect an MCP server
-
-Add a new MCP server URL to the MCP manager.
-
-The agent will automatically load remote tools.
+即可支持新的模型服务。
 
 ---
 
-# Design Goals
+## 接入 MCP 工具服务器
 
-Mini NanoBot aims to demonstrate a clean architecture for LLM agents:
+在 `MCP Manager` 中添加服务器地址即可动态加载远程工具。
 
-* simple
-* modular
-* extensible
-* easy to understand
+---
 
-The codebase intentionally avoids heavy frameworks to help developers learn the underlying mechanisms of AI agents.
+# 设计目标
+
+Mini NanoBot 主要用于展示 **AI Agent 的核心架构设计**：
+
+* 模块解耦
+* 插件化能力
+* 工具生态
+* 可扩展性
+
+代码尽量保持 **简单、清晰、易理解**，方便学习和扩展。
 
 ---
 
@@ -330,12 +358,4 @@ The codebase intentionally avoids heavy frameworks to help developers learn the 
 MIT License
 
 ---
-
-如果你愿意，我还可以帮你 **把 README 再升级成一个更“GitHub 爆款风格”的版本**，会增加：
-
-* 架构图
-* Agent workflow 图
-* MCP 工作流程图
-* 示例 GIF
-* 技术亮点
 
