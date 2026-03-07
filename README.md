@@ -1,6 +1,6 @@
 ---
 
-# Mini NanoBot
+Mini NanoBot
 
 **Mini NanoBot** 是一个使用 Python 实现的轻量级 **LLM Agent 框架**，用于探索和实践现代 AI Agent 的核心架构设计。
 
