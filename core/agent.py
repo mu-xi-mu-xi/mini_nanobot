@@ -3,6 +3,7 @@ from core.response import LLMResponse
 from providers.base import Provider
 from tools.registry import ToolRegistry
 from memory.base import BaseMemory
+from core.prompt_loader import PromptLoader
 class Agent:
     def __init__(
             self,
@@ -10,26 +11,39 @@ class Agent:
             tool_registry:ToolRegistry,
             max_iterations:int=5,
             history:Session|None=None,
-            memory:BaseMemory|None=None
-
+            memory:BaseMemory|None=None,
+            system_message:Message|None=None
         ):
         self.history=history or Session()
         self.provider=provider
         self.tool_registry=tool_registry
         self.max_iterations=max_iterations
         self.memory=memory
+        self.system_message=Message(role="system",content=PromptLoader().load("system"))
+
+    def  build_message(self,message:Message):
+        self.history.add(message)
+        if self.memory:
+            self.memory.save(message)
+        memory_message=[]
+        if self.memory:
+            memory_messages=self.memory.retrieve(self.history.get_messages()[-1]) 
+        else:
+            memory_messages=self.history.get_messages()
+        if memory_message:
+                messages=[self.system_message]+memory_messages+self.history.get_messages()
+            
+        else:
+            messages=[self.system_message]+self.history.get_messages()
+            
+        return messages
 
     def run(self,initial_message:Message):
-        self.history.add(initial_message)
-        self.memory.save(initial_message)
+        messages=self.build_message(initial_message)
         for i in range(self.max_iterations):
-            if self.memory:
-                messages=self.memory.retrieve(self.history.get_messages()[-1])
-            if not messages or not self.memory:
-                messages=self.history.get_messages()
             res:LLMResponse=self.provider.chat(messages=messages,tools=self.tool_registry.schemas())
-            self.history.add(Message(role="assistant",content=res.content))
-            self.memory.save(Message(role="assistant",content=res.content))
+            message=Message(role="assistant",content=res.content)
+            messages=self.build_message(message)
             if res.has_tool_calls():
                 for tool_call in res.tool_calls:
                     tool=self.tool_registry.get(tool_call.name)
