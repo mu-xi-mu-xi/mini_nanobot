@@ -202,6 +202,23 @@ Agent 继续推理
 * 远程能力扩展
 
 ---
+# 记忆模块架构
+---
+```
+Agent
+   │
+MemoryManager
+   │
+ ┌─┴─────────────┐
+ │               │
+ShortMemory   LongMemory
+(history)     (facts)
+ │
+VectorMemory
+(semantic)
+```
+
+---
 
 # 项目目录结构
 
@@ -246,10 +263,25 @@ mini_nanobot/
 │   └── store.py           # 简单 Memory Store
 │
 ├── templates/
-│   └── mcp_server.py      # 示例 MCP Server
+│   └── system.md      # 示例system prompt
 │
 └── main.py                # 项目入口
 ```
+---
+难点问题
+---
+Q：系统内部统一使用 {role, content} message 结构，但长期记忆需要 KV / 结构化数据，怎么兼容？
+
+A:不要让 LongMemory 直接依赖 message 结构，而是在 MemoryManager 做一层“message → memory event / fact”的转换
+
+Q:role的处理
+| role      | 处理                    |
+| --------- | --------------------- |
+| system    | 不存 memory             |
+| user      | short + long + vector |
+| assistant | short memory          |
+| tool      | short memory          |
+
 
 ---
 
