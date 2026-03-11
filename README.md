@@ -282,8 +282,20 @@ Q:role的处理
 | assistant | short memory          |
 | tool      | short memory          |
 
+Q：解决在模型传入long_term时，llm无法与问题相关联的问题，例如询问天气时无法正确使用memory_db.json文件中的信息
+---
 
 ---
+# 版本迭代
+v0.0.1 完成基础功能
+v0.0.2 更新设计了长短记忆模块
+v0.0.3 更新天气api接口为 
+```
+https://uapis.cn/api/v1/misc/weather/
+
+更多接口配置可参考：https://uapis.cn/docs/api-reference/get-github-repo
+```
+
 
 # 快速开始
 

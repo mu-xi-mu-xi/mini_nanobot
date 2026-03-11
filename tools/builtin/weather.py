@@ -16,9 +16,10 @@ class WeatherTool(Tool):
 
     def run(self,arguments:dict)->str:
         city=arguments["city"]
-        r = requests.get(f"https://wttr.in/{city}?format=j1")
+        r = requests.get(f"https://uapis.cn/api/v1/misc/weather/?city={city}",timeout=5)
         data=r.json()
         return {
             "city":city,
-            "weather":data["current_condition"][0]["temp_C"]
+            "weather":data["weather"],
+            "temperature":data["temperature"]
         }
